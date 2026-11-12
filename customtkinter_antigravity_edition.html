@@ -1,0 +1,1620 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CustomTkinter // Интерактивная шпаргалка в стиле Antigravity</title>
+    <!-- Подключение Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Подключение шрифтов Inter и JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        space: {
+                            950: '#05070c',
+                            900: '#07090e',
+                            850: '#0b0e17',
+                            800: '#0f131f',
+                            700: '#161c2e',
+                        },
+                        neon: {
+                            indigo: '#6366f1',
+                            cyan: '#06b6d4',
+                            violet: '#a855f7',
+                        }
+                    },
+                    animation: {
+                        'float-slow': 'float 7s ease-in-out infinite',
+                        'float-medium': 'float 5s ease-in-out infinite',
+                        'float-fast': 'float 4s ease-in-out infinite',
+                        'pulse-glow': 'pulseGlow 4s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
+                            '50%': { transform: 'translateY(-10px) rotate(1deg)' },
+                        },
+                        pulseGlow: {
+                            '0%, 100%': { opacity: 0.45 },
+                            '50%': { opacity: 0.85 },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Базовые стили и кастомный скроллбар */
+        body {
+            background-color: #07090e;
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #07090e;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 9999px;
+            border: 2px solid #07090e;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6366f1;
+        }
+
+        /* Эффект космической сетки на фоне */
+        .cosmic-grid {
+            background-size: 48px 48px;
+            background-image: 
+                linear-gradient(to right, rgba(99, 102, 241, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(99, 102, 241, 0.05) 1px, transparent 1px);
+        }
+
+        /* Glassmorphism карточки в стиле Antigravity */
+        .glass-card {
+            background: rgba(15, 19, 31, 0.72);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6);
+            transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .glass-card:hover {
+            border-color: rgba(99, 102, 241, 0.35);
+            box-shadow: 0 24px 48px -12px rgba(99, 102, 241, 0.14);
+        }
+
+        /* Стилизация симулятора окон CustomTkinter (Dark / Light режимы) */
+        .ctk-stage {
+            transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease;
+        }
+        .ctk-stage[data-ctk-theme="dark"] {
+            --ctk-bg: #242424;
+            --ctk-frame: #2b2b2b;
+            --ctk-frame-nested: #333333;
+            --ctk-border: #4a4a4a;
+            --ctk-text: #dce4ee;
+            --ctk-text-muted: #8e96a0;
+            --ctk-entry-bg: #343638;
+            --ctk-entry-border: #565b5e;
+            --ctk-primary: #1f6aa5;
+            --ctk-primary-hover: #144870;
+            --ctk-seg-bg: #2b2b2b;
+            --ctk-seg-unselected: #3a3a3a;
+        }
+        .ctk-stage[data-ctk-theme="light"] {
+            --ctk-bg: #ebebeb;
+            --ctk-frame: #dbdbdb;
+            --ctk-frame-nested: #cfcfcf;
+            --ctk-border: #979da2;
+            --ctk-text: #1a1a1a;
+            --ctk-text-muted: #5a6065;
+            --ctk-entry-bg: #f9f9fa;
+            --ctk-entry-border: #979da2;
+            --ctk-primary: #3b8ed0;
+            --ctk-primary-hover: #36719f;
+            --ctk-seg-bg: #cfcfcf;
+            --ctk-seg-unselected: #dcdcdc;
+        }
+
+        .ctk-window {
+            background-color: var(--ctk-bg);
+            color: var(--ctk-text);
+            border: 1px solid var(--ctk-border);
+            transition: all 0.3s ease;
+        }
+        .ctk-frame-box {
+            background-color: var(--ctk-frame);
+            border: 1px solid var(--ctk-border);
+            color: var(--ctk-text);
+        }
+        .ctk-btn {
+            background-color: var(--ctk-primary);
+            color: #ffffff;
+            transition: background-color 0.15s ease, transform 0.1s ease;
+        }
+        .ctk-btn:hover {
+            background-color: var(--ctk-primary-hover);
+        }
+        .ctk-btn:active {
+            transform: scale(0.97);
+        }
+        .ctk-entry {
+            background-color: var(--ctk-entry-bg);
+            border: 1.5px solid var(--ctk-entry-border);
+            color: var(--ctk-text);
+        }
+        .ctk-entry::placeholder {
+            color: var(--ctk-text-muted);
+        }
+        .ctk-entry:focus {
+            outline: none;
+            border-color: var(--ctk-primary);
+        }
+
+        /* Кастомный ползунок в стиле CTkSlider */
+        input[type=range].ctk-slider {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range].ctk-slider::-webkit-slider-runnable-track {
+            height: 8px;
+            border-radius: 999px;
+            background: var(--ctk-entry-bg);
+            border: 1px solid var(--ctk-border);
+        }
+        input[type=range].ctk-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: var(--ctk-primary);
+            border: 3px solid #ffffff;
+            margin-top: -6px;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+            transition: transform 0.15s ease;
+        }
+        input[type=range].ctk-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+
+        /* Подсветка синтаксиса Python */
+        .py-kw { color: #c084fc; font-weight: 500; }
+        .py-cls { color: #38bdf8; }
+        .py-fn { color: #60a5fa; }
+        .py-str { color: #4ade80; }
+        .py-num { color: #fb923c; }
+        .py-arg { color: #f472b6; }
+        .py-com { color: #64748b; font-style: italic; }
+    </style>
+</head>
+<body class="cosmic-grid min-h-screen antialiased selection:bg-indigo-500/30 selection:text-indigo-200">
+
+    <!-- Декоративные орбитальные свечения Antigravity -->
+    <div class="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+        <div class="absolute -top-40 -left-32 w-96 h-96 bg-indigo-600/20 rounded-full blur-[120px] animate-pulse-glow"></div>
+        <div class="absolute top-1/3 -right-32 w-[28rem] h-[28rem] bg-cyan-500/15 rounded-full blur-[130px] animate-pulse-glow" style="animation-delay: 1.5s;"></div>
+        <div class="absolute bottom-0 left-1/3 w-96 h-96 bg-purple-600/15 rounded-full blur-[120px] animate-pulse-glow" style="animation-delay: 3s;"></div>
+    </div>
+
+    <!-- Уведомление о копировании (Toast) -->
+    <div id="copyToast" class="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl bg-slate-900/95 border border-cyan-500/40 text-cyan-300 shadow-2xl shadow-cyan-500/10 backdrop-blur-md translate-y-24 opacity-0 transition-all duration-300 pointer-events-none">
+        <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+        <span class="text-sm font-medium">Код скопирован в буфер обмена!</span>
+    </div>
+
+    <!-- Липкая навигационная шапка -->
+    <header class="sticky top-0 z-40 border-b border-white/10 bg-[#07090e]/80 backdrop-blur-xl">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+            <!-- Логотип -->
+            <a href="#" class="flex items-center gap-3 group shrink-0">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-cyan-400 p-[1px] shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-transform">
+                    <div class="w-full h-full bg-[#07090e] rounded-[11px] flex items-center justify-center">
+                        <span class="font-mono font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-300 text-sm">CTk</span>
+                    </div>
+                </div>
+                <div>
+                    <span class="font-bold text-white tracking-tight text-base sm:text-lg">CustomTkinter</span>
+                    <span class="hidden sm:inline-block ml-1.5 text-xs font-mono px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">v5.2+ Docs</span>
+                </div>
+            </a>
+
+            <!-- Навигационные ссылки (Desktop) -->
+            <nav class="hidden lg:flex items-center gap-6 text-sm font-medium text-slate-300">
+                <a href="#quickstart" class="hover:text-cyan-400 transition-colors">Старт и окно</a>
+                <a href="#widgets" class="hover:text-cyan-400 transition-colors">Все виджеты</a>
+                <a href="#grid-masterclass" class="text-indigo-300 hover:text-cyan-300 transition-colors flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                    Мастер-класс Grid
+                </a>
+                <a href="#themes-images" class="hover:text-cyan-400 transition-colors">Темы и Картинки</a>
+            </nav>
+
+            <!-- Правая панель: Поиск + Переключатель темы предпросмотра -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- Быстрый поиск -->
+                <div class="relative w-36 sm:w-56">
+                    <svg class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <input type="text" id="widgetSearch" placeholder="Найти виджет..." class="w-full pl-9 pr-3 py-1.5 text-xs sm:text-sm bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:bg-white/10 transition-all">
+                </div>
+
+                <!-- Переключатель режима предпросмотра CTk (Dark / Light) -->
+                <button id="themeToggleBtn" onclick="togglePreviewTheme()" title="Переключить тему окон CustomTkinter" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs sm:text-sm font-medium text-slate-200 transition-all shrink-0">
+                    <span id="themeIndicatorDot" class="w-2.5 h-2.5 rounded-full bg-indigo-400 shadow-[0_0_8px_#6366f1]"></span>
+                    <span class="hidden md:inline text-slate-400">Окна:</span>
+                    <span id="themeToggleLabel" class="font-mono text-cyan-300">Dark</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- HERO SECTION (В стиле Antigravity) -->
+    <section class="relative pt-14 pb-20 sm:pt-20 sm:pb-28 overflow-hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+            
+            <!-- Парящие чипы в невесомости (декоративные) -->
+            <div class="hidden xl:block absolute -top-4 left-6 glass-card px-3.5 py-2 rounded-xl text-xs font-mono text-cyan-300 animate-float-slow border-cyan-500/20">
+                ctk.set_appearance_mode("dark")
+            </div>
+            <div class="hidden xl:block absolute top-12 right-8 glass-card px-3.5 py-2 rounded-xl text-xs font-mono text-purple-300 animate-float-medium border-purple-500/20">
+                grid(row=0, column=1, sticky="nsew")
+            </div>
+            <div class="hidden xl:block absolute bottom-4 left-16 glass-card px-3.5 py-2 rounded-xl text-xs font-mono text-indigo-300 animate-float-fast border-indigo-500/20">
+                corner_radius=12
+            </div>
+
+            <div class="text-center max-w-4xl mx-auto">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs sm:text-sm font-medium mb-6">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                    </span>
+                    Современный GUI на Python без боли и устаревшего дизайна
+                </div>
+
+                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.12] mb-6">
+                    Полная шпаргалка по
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-cyan-300 to-purple-400">CustomTkinter</span>
+                </h1>
+
+                <p class="text-base sm:text-lg text-slate-400 max-w-2xl mx-auto leading-relaxed mb-8">
+                    Интерактивный справочник по всем виджетам, параметрам стилизации и <span class="text-slate-200 font-medium">глубокий разбор компоновки <code class="font-mono text-cyan-300 bg-cyan-950/50 px-1.5 py-0.5 rounded">grid()</code></span> с живым песочница-симулятором. Кликайте по макетам и копируйте готовый код.
+                </p>
+
+                <!-- Команда установки в 1 клик -->
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mb-10">
+                    <div class="flex items-center justify-between gap-4 px-4 py-3 rounded-2xl bg-[#0b0e17] border border-white/10 shadow-xl w-full sm:w-auto">
+                        <div class="flex items-center gap-2.5 font-mono text-sm">
+                            <span class="text-indigo-400 select-none">$</span>
+                            <span class="text-slate-200">pip install customtkinter</span>
+                        </div>
+                        <button onclick="copyText('pip install customtkinter')" class="p-2 rounded-lg bg-white/5 hover:bg-indigo-500/20 text-slate-300 hover:text-cyan-300 transition-colors" title="Копировать команду">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        </button>
+                    </div>
+
+                    <a href="#grid-masterclass" class="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-semibold text-sm shadow-lg shadow-indigo-500/25 transition-all flex items-center justify-center gap-2">
+                        <span>Открыть симулятор Grid</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- БЛОК 1: БАЗОВЫЙ КАРКАС ПРИЛОЖЕНИЯ -->
+    <section id="quickstart" class="py-12 border-t border-white/5">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+                <div>
+                    <span class="text-xs font-mono uppercase tracking-wider text-cyan-400">01 // Архитектура</span>
+                    <h2 class="text-2xl sm:text-3xl font-bold text-white mt-1">Базовый шаблон приложения</h2>
+                </div>
+                <p class="text-sm text-slate-400 max-w-md">Рекомендуемый ООП-подход с наследованием от <code class="font-mono text-indigo-300">ctk.CTk</code> для чистой структуры проекта.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                <!-- Левая карточка: Живой макет базового окна -->
+                <div class="lg:col-span-5 glass-card rounded-2xl p-6 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-xs font-mono text-slate-400">Визуальный результат</span>
+                            <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/20">Interactive</span>
+                        </div>
+
+                        <!-- Имитация окна CustomTkinter -->
+                        <div class="ctk-stage" data-ctk-theme="dark">
+                            <div class="ctk-window rounded-xl overflow-hidden shadow-2xl">
+                                <!-- Заголовок окна OS -->
+                                <div class="px-3.5 py-2 bg-black/30 border-b border-white/10 flex items-center justify-between">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-rose-500/80"></span>
+                                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500/80"></span>
+                                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></span>
+                                    </div>
+                                    <span class="text-[11px] font-mono opacity-75">My App — 400x240</span>
+                                    <div class="w-8"></div>
+                                </div>
+                                <!-- Тело окна -->
+                                <div class="p-6 flex flex-col items-center justify-center gap-4 min-h-[175px]">
+                                    <p id="heroPreviewLabel" class="text-sm font-medium">Привет, CustomTkinter!</p>
+                                    <button onclick="document.getElementById('heroPreviewLabel').textContent = 'Кнопка нажата! ✨'" class="ctk-btn px-5 py-2 rounded-lg text-sm font-medium shadow">
+                                        Нажми меня
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 pt-4 border-t border-white/10 grid grid-cols-2 gap-3 text-xs">
+                        <div class="p-2.5 rounded-xl bg-white/[0.03]">
+                            <div class="font-mono text-indigo-300 mb-0.5">set_appearance_mode</div>
+                            <div class="text-slate-400">"dark", "light", "system"</div>
+                        </div>
+                        <div class="p-2.5 rounded-xl bg-white/[0.03]">
+                            <div class="font-mono text-cyan-300 mb-0.5">set_default_color_theme</div>
+                            <div class="text-slate-400">"blue", "green", "dark-blue"</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Правая карточка: Код шаблона -->
+                <div class="lg:col-span-7 glass-card rounded-2xl p-6 flex flex-col justify-between relative group">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
+                            <span class="text-xs font-mono text-slate-300">main.py</span>
+                        </div>
+                        <button onclick="copyCodeBlock('code-quickstart')" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-indigo-500/20 border border-white/10 text-xs font-medium text-slate-200 hover:text-cyan-300 transition-all flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            Копировать код
+                        </button>
+                    </div>
+
+                    <pre id="code-quickstart" class="font-mono text-xs sm:text-sm leading-relaxed overflow-x-auto p-4 rounded-xl bg-[#06080d] border border-white/5 text-slate-200"><code><span class="py-kw">import</span> customtkinter <span class="py-kw">as</span> ctk
+
+<span class="py-com"># 1. Глобальные настройки темы (до создания окна)</span>
+ctk.set_appearance_mode(<span class="py-str">"dark"</span>)        <span class="py-com"># "system", "dark", "light"</span>
+ctk.set_default_color_theme(<span class="py-str">"blue"</span>)   <span class="py-com"># "blue", "green", "dark-blue"</span>
+
+<span class="py-kw">class</span> <span class="py-cls">App</span>(ctk.CTk):
+    <span class="py-kw">def</span> <span class="py-fn">__init__</span>(self):
+        <span class="py-fn">super</span>().__init__()
+
+        self.title(<span class="py-str">"My App"</span>)
+        self.geometry(<span class="py-str">"400x240"</span>)
+        self.grid_columnconfigure(<span class="py-num">0</span>, <span class="py-arg">weight</span>=<span class="py-num">1</span>)
+
+        self.label = ctk.CTkLabel(self, <span class="py-arg">text</span>=<span class="py-str">"Привет, CustomTkinter!"</span>)
+        self.label.grid(<span class="py-arg">row</span>=<span class="py-num">0</span>, <span class="py-arg">column</span>=<span class="py-num">0</span>, <span class="py-arg">padx</span>=<span class="py-num">20</span>, <span class="py-arg">pady</span>=(<span class="py-num">30</span>, <span class="py-num">15</span>))
+
+        self.button = ctk.CTkButton(self, <span class="py-arg">text</span>=<span class="py-str">"Нажми меня"</span>, <span class="py-arg">command</span>=self.on_click)
+        self.button.grid(<span class="py-arg">row</span>=<span class="py-num">1</span>, <span class="py-arg">column</span>=<span class="py-num">0</span>, <span class="py-arg">padx</span>=<span class="py-num">20</span>, <span class="py-arg">pady</span>=<span class="py-num">10</span>)
+
+    <span class="py-kw">def</span> <span class="py-fn">on_click</span>(self):
+        self.label.configure(<span class="py-arg">text</span>=<span class="py-str">"Кнопка нажата! ✨"</span>)
+
+<span class="py-kw">if</span> __name__ == <span class="py-str">"__main__"</span>:
+    app = <span class="py-cls">App</span>()
+    app.mainloop()</code></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- БЛОК 2: КАТАЛОГ ВСЕХ ВИДЖЕТОВ С ЖИВЫМИ ПРЕВЬЮ -->
+    <section id="widgets" class="py-16 border-t border-white/5">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
+                <div>
+                    <span class="text-xs font-mono uppercase tracking-wider text-indigo-400">02 // Библиотека компонентов</span>
+                    <h2 class="text-2xl sm:text-3xl font-bold text-white mt-1">Все виджеты CustomTkinter</h2>
+                </div>
+                <!-- Фильтр по категориям -->
+                <div class="flex flex-wrap gap-2" id="categoryFilters">
+                    <button onclick="filterCategory('all', this)" class="cat-btn active px-3.5 py-1.5 rounded-xl text-xs font-medium bg-indigo-600 text-white transition-all">Все (12)</button>
+                    <button onclick="filterCategory('basic', this)" class="cat-btn px-3.5 py-1.5 rounded-xl text-xs font-medium bg-white/5 text-slate-300 hover:bg-white/10 transition-all">Базовые</button>
+                    <button onclick="filterCategory('input', this)" class="cat-btn px-3.5 py-1.5 rounded-xl text-xs font-medium bg-white/5 text-slate-300 hover:bg-white/10 transition-all">Ввод и выбор</button>
+                    <button onclick="filterCategory('container', this)" class="cat-btn px-3.5 py-1.5 rounded-xl text-xs font-medium bg-white/5 text-slate-300 hover:bg-white/10 transition-all">Контейнеры и окна</button>
+                </div>
+            </div>
+
+            <!-- Сетка карточек виджетов -->
+            <div id="widgetsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <!-- 1. CTkButton -->
+                <article class="widget-card glass-card rounded-2xl p-6 flex flex-col justify-between" data-category="basic" data-keywords="ctkbutton кнопка button click command fg_color corner_radius">
+                    <div>
+                        <div class="flex items-start justify-between gap-2 mb-3">
+                            <div>
+                                <h3 class="text-lg font-bold font-mono text-cyan-300">CTkButton</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">Интерактивная кнопка со скруглением, рамкой, иконкой и анимацией наведения.</p>
+                            </div>
+                            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-300">Базовый</span>
+                        </div>
+
+                        <!-- Живой макет -->
+                        <div class="ctk-stage my-4" data-ctk-theme="dark">
+                            <div class="ctk-window rounded-xl p-5 flex flex-wrap items-center justify-center gap-3">
+                                <button onclick="this.textContent = this.textContent === 'Запустить' ? 'Выполнено ✓' : 'Запустить'" class="ctk-btn px-4 py-2 rounded-lg text-xs font-medium shadow">
+                                    Запустить
+                                </button>
+                                <button class="px-4 py-2 rounded-lg text-xs font-medium border-2 border-[#1f6aa5] text-inherit hover:bg-[#1f6aa5]/20 transition-colors">
+                                    Контурная
+                                </button>
+                                <button disabled class="px-4 py-2 rounded-lg text-xs font-medium bg-slate-500/30 text-slate-400 cursor-not-allowed">
+                                    Disabled
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Ключевые параметры -->
+                        <div class="flex flex-wrap gap-1.5 mb-4 text-[11px] font-mono">
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">text</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">command</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">fg_color</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">hover_color</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">corner_radius</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">border_width</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">image</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">state="disabled"</span>
+                        </div>
+                    </div>
+
+                    <!-- Код -->
+                    <div class="relative">
+                        <button onclick="copyCodeBlock('code-btn')" class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-md bg-white/10 hover:bg-indigo-500/30 text-[11px] text-slate-200 transition-colors">Копировать</button>
+                        <pre id="code-btn" class="font-mono text-xs p-3.5 rounded-xl bg-[#06080d] border border-white/5 overflow-x-auto text-slate-300"><code>btn = ctk.CTkButton(
+    master,
+    <span class="py-arg">text</span>=<span class="py-str">"Запустить"</span>,
+    <span class="py-arg">corner_radius</span>=<span class="py-num">10</span>,
+    <span class="py-arg">fg_color</span>=<span class="py-str">"#1f6aa5"</span>,
+    <span class="py-arg">hover_color</span>=<span class="py-str">"#144870"</span>,
+    <span class="py-arg">command</span>=my_callback
+)</code></pre>
+                    </div>
+                </article>
+
+                <!-- 2. CTkLabel -->
+                <article class="widget-card glass-card rounded-2xl p-6 flex flex-col justify-between" data-category="basic" data-keywords="ctklabel текст метка font text_color compound image">
+                    <div>
+                        <div class="flex items-start justify-between gap-2 mb-3">
+                            <div>
+                                <h3 class="text-lg font-bold font-mono text-cyan-300">CTkLabel</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">Текстовая метка с поддержкой кастомных шрифтов CTkFont, иконок и скругленного фона.</p>
+                            </div>
+                            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-300">Базовый</span>
+                        </div>
+
+                        <div class="ctk-stage my-4" data-ctk-theme="dark">
+                            <div class="ctk-window rounded-xl p-5 flex flex-col items-center justify-center gap-2.5">
+                                <div class="text-base font-bold tracking-tight">Заголовок панели управления</div>
+                                <div class="px-3 py-1 rounded-md bg-[#1f6aa5]/20 border border-[#1f6aa5]/40 text-xs font-mono text-cyan-400">
+                                    Статус системы: Активна ●
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-1.5 mb-4 text-[11px] font-mono">
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">text</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">font=ctk.CTkFont(...)</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">text_color</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">fg_color</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">compound="left"</span>
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <button onclick="copyCodeBlock('code-label')" class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-md bg-white/10 hover:bg-indigo-500/30 text-[11px] text-slate-200 transition-colors">Копировать</button>
+                        <pre id="code-label" class="font-mono text-xs p-3.5 rounded-xl bg-[#06080d] border border-white/5 overflow-x-auto text-slate-300"><code>lbl = ctk.CTkLabel(
+    master,
+    <span class="py-arg">text</span>=<span class="py-str">"Заголовок панели"</span>,
+    <span class="py-arg">font</span>=ctk.CTkFont(<span class="py-arg">size</span>=<span class="py-num">18</span>, <span class="py-arg">weight</span>=<span class="py-str">"bold"</span>),
+    <span class="py-arg">text_color</span>=(<span class="py-str">"#1a1a1a"</span>, <span class="py-str">"#dce4ee"</span>) <span class="py-com"># (Light, Dark)</span>
+)</code></pre>
+                    </div>
+                </article>
+
+                <!-- 3. CTkEntry -->
+                <article class="widget-card glass-card rounded-2xl p-6 flex flex-col justify-between" data-category="input" data-keywords="ctkentry поле ввода текст пароль placeholder_text show get insert">
+                    <div>
+                        <div class="flex items-start justify-between gap-2 mb-3">
+                            <div>
+                                <h3 class="text-lg font-bold font-mono text-cyan-300">CTkEntry</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">Однострочное поле ввода с встроенным <code class="text-indigo-300">placeholder_text</code> (в отличие от обычного Tkinter).</p>
+                            </div>
+                            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300">Ввод</span>
+                        </div>
+
+                        <div class="ctk-stage my-4" data-ctk-theme="dark">
+                            <div class="ctk-window rounded-xl p-5 flex flex-col sm:flex-row items-center justify-center gap-3">
+                                <input type="text" placeholder="Введите логин..." class="ctk-entry px-3.5 py-2 rounded-lg text-xs w-full sm:w-44">
+                                <input type="password" value="secret123" placeholder="Пароль" class="ctk-entry px-3.5 py-2 rounded-lg text-xs w-full sm:w-40">
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-1.5 mb-4 text-[11px] font-mono">
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">placeholder_text</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">show="*"</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">.get()</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">.insert(0, "...")</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">.delete(0, "end")</span>
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <button onclick="copyCodeBlock('code-entry')" class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-md bg-white/10 hover:bg-indigo-500/30 text-[11px] text-slate-200 transition-colors">Копировать</button>
+                        <pre id="code-entry" class="font-mono text-xs p-3.5 rounded-xl bg-[#06080d] border border-white/5 overflow-x-auto text-slate-300"><code>entry = ctk.CTkEntry(master, <span class="py-arg">placeholder_text</span>=<span class="py-str">"Введите логин..."</span>)
+pwd = ctk.CTkEntry(master, <span class="py-arg">placeholder_text</span>=<span class="py-str">"Пароль"</span>, <span class="py-arg">show</span>=<span class="py-str">"*"</span>)
+
+value = entry.get()            <span class="py-com"># Получить текст</span>
+entry.delete(<span class="py-num">0</span>, <span class="py-str">"end"</span>)         <span class="py-com"># Очистить поле</span></code></pre>
+                    </div>
+                </article>
+
+                <!-- 4. CTkTextbox -->
+                <article class="widget-card glass-card rounded-2xl p-6 flex flex-col justify-between" data-category="input" data-keywords="ctktextbox многострочный текст лог textarea scrollbar wrap">
+                    <div>
+                        <div class="flex items-start justify-between gap-2 mb-3">
+                            <div>
+                                <h3 class="text-lg font-bold font-mono text-cyan-300">CTkTextbox</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">Многострочный редактор текста со встроенным стилизованным скроллбаром.</p>
+                            </div>
+                            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300">Ввод</span>
+                        </div>
+
+                        <div class="ctk-stage my-4" data-ctk-theme="dark">
+                            <div class="ctk-window rounded-xl p-4">
+                                <textarea rows="3" class="ctk-entry w-full rounded-lg p-2.5 text-xs font-mono resize-none">Лог событий:
+[07:25:01] Инициализация ядра...
+[07:25:02] Подключение установлено.</textarea>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-1.5 mb-4 text-[11px] font-mono">
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">wrap="word"</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">.insert("0.0", text)</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">.get("0.0", "end")</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">activate_scrollbars</span>
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <button onclick="copyCodeBlock('code-textbox')" class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-md bg-white/10 hover:bg-indigo-500/30 text-[11px] text-slate-200 transition-colors">Копировать</button>
+                        <pre id="code-textbox" class="font-mono text-xs p-3.5 rounded-xl bg-[#06080d] border border-white/5 overflow-x-auto text-slate-300"><code>textbox = ctk.CTkTextbox(master, <span class="py-arg">width</span>=<span class="py-num">300</span>, <span class="py-arg">height</span>=<span class="py-num">100</span>, <span class="py-arg">wrap</span>=<span class="py-str">"word"</span>)
+textbox.insert(<span class="py-str">"0.0"</span>, <span class="py-str">"Строка 1\nСтрока 2"</span>) <span class="py-com"># Индекс "строка.символ"</span>
+all_text = textbox.get(<span class="py-str">"0.0"</span>, <span class="py-str">"end"</span>)</code></pre>
+                    </div>
+                </article>
+
+                <!-- 5. CTkCheckBox & CTkRadioButton -->
+                <article class="widget-card glass-card rounded-2xl p-6 flex flex-col justify-between" data-category="input" data-keywords="ctkcheckbox ctkradiobutton галочка радиокнопка выбор boolean">
+                    <div>
+                        <div class="flex items-start justify-between gap-2 mb-3">
+                            <div>
+                                <h3 class="text-lg font-bold font-mono text-cyan-300">CTkCheckBox & RadioButton</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">Флажки множественного выбора и взаимоисключающие радиокнопки с привязкой к переменным.</p>
+                            </div>
+                            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300">Выбор</span>
+                        </div>
+
+                        <div class="ctk-stage my-4" data-ctk-theme="dark">
+                            <div class="ctk-window rounded-xl p-5 flex flex-wrap items-center justify-around gap-4">
+                                <label class="flex items-center gap-2.5 cursor-pointer select-none text-xs">
+                                    <input type="checkbox" checked class="w-4 h-4 accent-[#1f6aa5] rounded cursor-pointer">
+                                    <span>Автосохранение</span>
+                                </label>
+                                <div class="flex items-center gap-4 text-xs">
+                                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                                        <input type="radio" name="ctk_radio_demo" checked class="w-4 h-4 accent-[#1f6aa5] cursor-pointer">
+                                        <span>Вариант А</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                                        <input type="radio" name="ctk_radio_demo" class="w-4 h-4 accent-[#1f6aa5] cursor-pointer">
+                                        <span>Вариант Б</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-1.5 mb-4 text-[11px] font-mono">
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">onvalue / offvalue</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">variable=ctk.IntVar()</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">.select() / .deselect()</span>
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <button onclick="copyCodeBlock('code-check')" class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-md bg-white/10 hover:bg-indigo-500/30 text-[11px] text-slate-200 transition-colors">Копировать</button>
+                        <pre id="code-check" class="font-mono text-xs p-3.5 rounded-xl bg-[#06080d] border border-white/5 overflow-x-auto text-slate-300"><code>chk = ctk.CTkCheckBox(master, <span class="py-arg">text</span>=<span class="py-str">"Автосохранение"</span>, <span class="py-arg">onvalue</span>=<span class="py-num">1</span>, <span class="py-arg">offvalue</span>=<span class="py-num">0</span>)
+
+radio_var = ctk.IntVar(<span class="py-arg">value</span>=<span class="py-num">1</span>)
+r1 = ctk.CTkRadioButton(master, <span class="py-arg">text</span>=<span class="py-str">"Вариант А"</span>, <span class="py-arg">variable</span>=radio_var, <span class="py-arg">value</span>=<span class="py-num">1</span>)
+r2 = ctk.CTkRadioButton(master, <span class="py-arg">text</span>=<span class="py-str">"Вариант Б"</span>, <span class="py-arg">variable</span>=radio_var, <span class="py-arg">value</span>=<span class="py-num">2</span>)</code></pre>
+                    </div>
+                </article>
+
+                <!-- 6. CTkSwitch -->
+                <article class="widget-card glass-card rounded-2xl p-6 flex flex-col justify-between" data-category="input" data-keywords="ctkswitch переключатель тумблер toggle switch">
+                    <div>
+                        <div class="flex items-start justify-between gap-2 mb-3">
+                            <div>
+                                <h3 class="text-lg font-bold font-mono text-cyan-300">CTkSwitch</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">Современный тумблер (переключатель) с плавной анимацией бегунка.</p>
+                            </div>
+                            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300">Выбор</span>
+                        </div>
+
+                        <div class="ctk-stage my-4" data-ctk-theme="dark">
+                            <div class="ctk-window rounded-xl p-5 flex items-center justify-center">
+                                <button type="button" onclick="toggleDemoSwitch(this)" data-checked="true" class="flex items-center gap-3 cursor-pointer group">
+                                    <span class="switch-track w-11 h-6 rounded-full bg-[#1f6aa5] p-1 transition-colors flex items-center">
+                                        <span class="switch-thumb w-4 h-4 rounded-full bg-white shadow transform translate-x-5 transition-transform"></span>
+                                    </span>
+                                    <span class="switch-label text-xs font-medium">Уведомления: ВКЛ</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-1.5 mb-4 text-[11px] font-mono">
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">progress_color</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">button_color</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">switch_width / switch_height</span>
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <button onclick="copyCodeBlock('code-switch')" class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-md bg-white/10 hover:bg-indigo-500/30 text-[11px] text-slate-200 transition-colors">Копировать</button>
+                        <pre id="code-switch" class="font-mono text-xs p-3.5 rounded-xl bg-[#06080d] border border-white/5 overflow-x-auto text-slate-300"><code>switch_var = ctk.StringVar(<span class="py-arg">value</span>=<span class="py-str">"on"</span>)
+switch = ctk.CTkSwitch(
+    master,
+    <span class="py-arg">text</span>=<span class="py-str">"Уведомления"</span>,
+    <span class="py-arg">variable</span>=switch_var,
+    <span class="py-arg">onvalue</span>=<span class="py-str">"on"</span>, <span class="py-arg">offvalue</span>=<span class="py-str">"off"</span>
+)</code></pre>
+                    </div>
+                </article>
+
+                <!-- 7. CTkSlider & CTkProgressBar -->
+                <article class="widget-card glass-card rounded-2xl p-6 flex flex-col justify-between" data-category="basic" data-keywords="ctkslider ctkprogressbar ползунок прогресс бар загрузка">
+                    <div>
+                        <div class="flex items-start justify-between gap-2 mb-3">
+                            <div>
+                                <h3 class="text-lg font-bold font-mono text-cyan-300">CTkSlider & ProgressBar</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">Слайдер выбора числового значения и шкала прогресса (от <code class="text-indigo-300">0.0</code> до <code class="text-indigo-300">1.0</code>).</p>
+                            </div>
+                            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-indigo-500/15 text-indigo-300">Индикация</span>
+                        </div>
+
+                        <div class="ctk-stage my-4" data-ctk-theme="dark">
+                            <div class="ctk-window rounded-xl p-5 flex flex-col gap-3.5">
+                                <div class="flex items-center justify-between text-xs font-mono">
+                                    <span>Потяните слайдер:</span>
+                                    <span id="sliderDemoVal" class="text-cyan-400 font-bold">65%</span>
+                                </div>
+                                <input type="range" min="0" max="100" value="65" oninput="updateSliderDemo(this.value)" class="ctk-slider w-full">
+                                <!-- ProgressBar -->
+                                <div class="w-full h-2.5 rounded-full bg-black/30 overflow-hidden border border-white/10">
+                                    <div id="progressDemoFill" class="h-full bg-[#1f6aa5] rounded-full transition-all duration-75" style="width: 65%;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-1.5 mb-4 text-[11px] font-mono">
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">from_ / to</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">number_of_steps</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">progressbar.set(0.65)</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">mode="indeterminate"</span>
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <button onclick="copyCodeBlock('code-slider')" class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-md bg-white/10 hover:bg-indigo-500/30 text-[11px] text-slate-200 transition-colors">Копировать</button>
+                        <pre id="code-slider" class="font-mono text-xs p-3.5 rounded-xl bg-[#06080d] border border-white/5 overflow-x-auto text-slate-300"><code>progress = ctk.CTkProgressBar(master)
+progress.set(<span class="py-num">0.65</span>) <span class="py-com"># Значение строго от 0.0 до 1.0!</span>
+
+slider = ctk.CTkSlider(
+    master, <span class="py-arg">from_</span>=<span class="py-num">0</span>, <span class="py-arg">to</span>=<span class="py-num">1</span>,
+    <span class="py-arg">command</span>=<span class="py-kw">lambda</span> val: progress.set(val)
+)</code></pre>
+                    </div>
+                </article>
+
+                <!-- 8. CTkOptionMenu & CTkComboBox -->
+                <article class="widget-card glass-card rounded-2xl p-6 flex flex-col justify-between" data-category="input" data-keywords="ctkoptionmenu ctkcombobox выпадающий список dropdown select">
+                    <div>
+                        <div class="flex items-start justify-between gap-2 mb-3">
+                            <div>
+                                <h3 class="text-lg font-bold font-mono text-cyan-300">CTkOptionMenu & ComboBox</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">Выпадающие списки: <code class="text-indigo-300">OptionMenu</code> (только выбор) и <code class="text-indigo-300">ComboBox</code> (выбор + ручной ввод).</p>
+                            </div>
+                            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300">Выбор</span>
+                        </div>
+
+                        <div class="ctk-stage my-4" data-ctk-theme="dark">
+                            <div class="ctk-window rounded-xl p-5 flex flex-wrap items-center justify-center gap-3">
+                                <select class="ctk-btn px-3.5 py-2 rounded-lg text-xs font-medium cursor-pointer focus:outline-none">
+                                    <option>Python 3.12</option>
+                                    <option>Python 3.11</option>
+                                    <option>Python 3.10</option>
+                                </select>
+                                <div class="flex items-center ctk-entry rounded-lg overflow-hidden">
+                                    <input type="text" value="Режим: Авто" class="bg-transparent px-3 py-1.5 text-xs w-28 focus:outline-none">
+                                    <span class="px-2 py-1.5 bg-[#1f6aa5] text-white text-[10px]">▼</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-1.5 mb-4 text-[11px] font-mono">
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">values=["A", "B"]</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">command</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">.set("A")</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">dropdown_fg_color</span>
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <button onclick="copyCodeBlock('code-option')" class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-md bg-white/10 hover:bg-indigo-500/30 text-[11px] text-slate-200 transition-colors">Копировать</button>
+                        <pre id="code-option" class="font-mono text-xs p-3.5 rounded-xl bg-[#06080d] border border-white/5 overflow-x-auto text-slate-300"><code>menu = ctk.CTkOptionMenu(
+    master,
+    <span class="py-arg">values</span>=[<span class="py-str">"Python 3.12"</span>, <span class="py-str">"Python 3.11"</span>],
+    <span class="py-arg">command</span>=<span class="py-kw">lambda</span> choice: <span class="py-fn">print</span>(choice)
+)
+combo = ctk.CTkComboBox(master, <span class="py-arg">values</span>=[<span class="py-str">"Авто"</span>, <span class="py-str">"Ручной"</span>])</code></pre>
+                    </div>
+                </article>
+
+                <!-- 9. CTkSegmentedButton -->
+                <article class="widget-card glass-card rounded-2xl p-6 flex flex-col justify-between" data-category="input" data-keywords="ctksegmentedbutton сегментированная кнопка переключатель вкладок">
+                    <div>
+                        <div class="flex items-start justify-between gap-2 mb-3">
+                            <div>
+                                <h3 class="text-lg font-bold font-mono text-cyan-300">CTkSegmentedButton</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">Стильный горизонтальный переключатель режимов (аналог iOS Segmented Control).</p>
+                            </div>
+                            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300">Выбор</span>
+                        </div>
+
+                        <div class="ctk-stage my-4" data-ctk-theme="dark">
+                            <div class="ctk-window rounded-xl p-5 flex flex-col items-center justify-center gap-2.5">
+                                <div class="inline-flex p-1 rounded-lg bg-black/25 border border-white/10" id="segDemoGroup">
+                                    <button onclick="selectSegBtn(this, 'День')" class="seg-item px-4 py-1.5 rounded-md text-xs font-medium bg-[#1f6aa5] text-white transition-all">День</button>
+                                    <button onclick="selectSegBtn(this, 'Неделя')" class="seg-item px-4 py-1.5 rounded-md text-xs font-medium text-inherit opacity-75 hover:opacity-100 transition-all">Неделя</button>
+                                    <button onclick="selectSegBtn(this, 'Месяц')" class="seg-item px-4 py-1.5 rounded-md text-xs font-medium text-inherit opacity-75 hover:opacity-100 transition-all">Месяц</button>
+                                </div>
+                                <span id="segDemoOutput" class="text-[11px] font-mono opacity-75">Выбрано: День</span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-1.5 mb-4 text-[11px] font-mono">
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">values=["День", "Неделя"]</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">selected_color</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">.set("День")</span>
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <button onclick="copyCodeBlock('code-seg')" class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-md bg-white/10 hover:bg-indigo-500/30 text-[11px] text-slate-200 transition-colors">Копировать</button>
+                        <pre id="code-seg" class="font-mono text-xs p-3.5 rounded-xl bg-[#06080d] border border-white/5 overflow-x-auto text-slate-300"><code>seg = ctk.CTkSegmentedButton(
+    master,
+    <span class="py-arg">values</span>=[<span class="py-str">"День"</span>, <span class="py-str">"Неделя"</span>, <span class="py-str">"Месяц"</span>],
+    <span class="py-arg">command</span>=<span class="py-kw">lambda</span> v: <span class="py-fn">print</span>(<span class="py-str">"Выбрано:"</span>, v)
+)
+seg.set(<span class="py-str">"День"</span>)</code></pre>
+                    </div>
+                </article>
+
+                <!-- 10. CTkTabview -->
+                <article class="widget-card glass-card rounded-2xl p-6 flex flex-col justify-between" data-category="container" data-keywords="ctktabview вкладки табы tabs контейнер">
+                    <div>
+                        <div class="flex items-start justify-between gap-2 mb-3">
+                            <div>
+                                <h3 class="text-lg font-bold font-mono text-cyan-300">CTkTabview</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">Контейнер с вкладками. Каждая вкладка (<code class="text-indigo-300">tabview.tab("Имя")</code>) является обычным фреймом.</p>
+                            </div>
+                            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-purple-500/15 text-purple-300">Контейнер</span>
+                        </div>
+
+                        <div class="ctk-stage my-4" data-ctk-theme="dark">
+                            <div class="ctk-window rounded-xl p-4">
+                                <div class="flex justify-center mb-2">
+                                    <div class="inline-flex p-1 rounded-lg bg-black/25 border border-white/10">
+                                        <button onclick="switchDemoTab(0, this)" class="tab-demo-btn px-3 py-1 rounded text-xs font-medium bg-[#1f6aa5] text-white">Общие</button>
+                                        <button onclick="switchDemoTab(1, this)" class="tab-demo-btn px-3 py-1 rounded text-xs font-medium opacity-75">Сеть</button>
+                                    </div>
+                                </div>
+                                <div class="ctk-frame-box rounded-lg p-3.5 text-center text-xs">
+                                    <div id="tabDemoContent0">Содержимое вкладки «Общие» ⚙️</div>
+                                    <div id="tabDemoContent1" class="hidden">Настройки прокси и порта: 8080 🌐</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-1.5 mb-4 text-[11px] font-mono">
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">.add("Имя")</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">.tab("Имя")</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">.set("Имя")</span>
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <button onclick="copyCodeBlock('code-tab')" class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-md bg-white/10 hover:bg-indigo-500/30 text-[11px] text-slate-200 transition-colors">Копировать</button>
+                        <pre id="code-tab" class="font-mono text-xs p-3.5 rounded-xl bg-[#06080d] border border-white/5 overflow-x-auto text-slate-300"><code>tabs = ctk.CTkTabview(master, <span class="py-arg">width</span>=<span class="py-num">300</span>, <span class="py-arg">height</span>=<span class="py-num">140</span>)
+tabs.add(<span class="py-str">"Общие"</span>)
+tabs.add(<span class="py-str">"Сеть"</span>)
+
+<span class="py-com"># Добавляем виджет внутрь конкретной вкладки:</span>
+ctk.CTkLabel(tabs.tab(<span class="py-str">"Общие"</span>), <span class="py-arg">text</span>=<span class="py-str">"Настройки"</span>).pack()</code></pre>
+                    </div>
+                </article>
+
+                <!-- 11. CTkFrame & CTkScrollableFrame -->
+                <article class="widget-card glass-card rounded-2xl p-6 flex flex-col justify-between" data-category="container" data-keywords="ctkframe ctkscrollableframe фрейм скролл контейнер карточки">
+                    <div>
+                        <div class="flex items-start justify-between gap-2 mb-3">
+                            <div>
+                                <h3 class="text-lg font-bold font-mono text-cyan-300">CTkFrame & ScrollableFrame</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">Группирующие контейнеры и готовый прокручиваемый список без мучений с Canvas.</p>
+                            </div>
+                            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-purple-500/15 text-purple-300">Контейнер</span>
+                        </div>
+
+                        <div class="ctk-stage my-4" data-ctk-theme="dark">
+                            <div class="ctk-window rounded-xl p-4">
+                                <div class="ctk-frame-box rounded-lg p-2.5">
+                                    <div class="text-[11px] font-bold text-center pb-1.5 mb-2 border-b border-white/10">Список задач (Scrollable)</div>
+                                    <div class="h-16 overflow-y-auto space-y-1.5 pr-1 text-xs">
+                                        <div class="px-2.5 py-1 rounded bg-black/20">1. Настроить сетку grid()</div>
+                                        <div class="px-2.5 py-1 rounded bg-black/20">2. Добавить иконки CTkImage</div>
+                                        <div class="px-2.5 py-1 rounded bg-black/20">3. Собрать exe через PyInstaller</div>
+                                        <div class="px-2.5 py-1 rounded bg-black/20">4. Опубликовать на GitHub</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-1.5 mb-4 text-[11px] font-mono">
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">label_text</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">orientation="vertical"</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">corner_radius</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">border_width</span>
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <button onclick="copyCodeBlock('code-frame')" class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-md bg-white/10 hover:bg-indigo-500/30 text-[11px] text-slate-200 transition-colors">Копировать</button>
+                        <pre id="code-frame" class="font-mono text-xs p-3.5 rounded-xl bg-[#06080d] border border-white/5 overflow-x-auto text-slate-300"><code>scroll = ctk.CTkScrollableFrame(master, <span class="py-arg">label_text</span>=<span class="py-str">"Список задач"</span>)
+<span class="py-kw">for</span> i <span class="py-kw">in</span> <span class="py-fn">range</span>(<span class="py-num">20</span>):
+    ctk.CTkLabel(scroll, <span class="py-arg">text</span>=<span class="py-str">f"Задача #{i}"</span>).pack(<span class="py-arg">pady</span>=<span class="py-num">4</span>)</code></pre>
+                    </div>
+                </article>
+
+                <!-- 12. CTkToplevel & CTkInputDialog -->
+                <article class="widget-card glass-card rounded-2xl p-6 flex flex-col justify-between" data-category="container" data-keywords="ctktoplevel ctkinputdialog модальное окно диалог дочернее">
+                    <div>
+                        <div class="flex items-start justify-between gap-2 mb-3">
+                            <div>
+                                <h3 class="text-lg font-bold font-mono text-cyan-300">CTkToplevel & InputDialog</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">Дочерние окна настроек и готовое модальное диалоговое окно запроса текста.</p>
+                            </div>
+                            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-purple-500/15 text-purple-300">Окна</span>
+                        </div>
+
+                        <div class="ctk-stage my-4" data-ctk-theme="dark">
+                            <div class="ctk-window rounded-xl p-4 flex items-center justify-center relative">
+                                <div class="ctk-frame-box rounded-xl p-3.5 w-64 shadow-2xl border border-[#1f6aa5]">
+                                    <div class="text-[11px] font-bold mb-2">CTkInputDialog</div>
+                                    <div class="text-[11px] opacity-80 mb-2">Введите имя проекта:</div>
+                                    <div class="ctk-entry px-2 py-1 rounded text-[11px] mb-2.5">Antigravity_UI</div>
+                                    <div class="flex justify-end gap-2">
+                                        <span class="px-2.5 py-0.5 rounded bg-slate-500/30 text-[10px]">Cancel</span>
+                                        <span class="ctk-btn px-3 py-0.5 rounded text-[10px]">Ok</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-1.5 mb-4 text-[11px] font-mono">
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">dialog.get_input()</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">toplevel.grab_set()</span>
+                            <span class="px-2 py-0.5 rounded bg-white/5 text-slate-300">toplevel.focus()</span>
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <button onclick="copyCodeBlock('code-dialog')" class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-md bg-white/10 hover:bg-indigo-500/30 text-[11px] text-slate-200 transition-colors">Копировать</button>
+                        <pre id="code-dialog" class="font-mono text-xs p-3.5 rounded-xl bg-[#06080d] border border-white/5 overflow-x-auto text-slate-300"><code><span class="py-com"># Встроенный диалог ввода</span>
+dialog = ctk.CTkInputDialog(<span class="py-arg">text</span>=<span class="py-str">"Имя проекта:"</span>, <span class="py-arg">title</span>=<span class="py-str">"Новый"</span>)
+name = dialog.get_input() <span class="py-com"># Вернёт строку или None</span>
+
+<span class="py-com"># Кастомное дочернее окно</span>
+win = ctk.CTkToplevel(self)
+win.grab_set() <span class="py-com"># Сделать окно модальным</span></code></pre>
+                    </div>
+                </article>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- БЛОК 3: МАСТЕР-КЛАСС ПО КОМПОНОВКЕ GRID() (ОСОБОЕ ВНИМАНИЕ) -->
+    <section id="grid-masterclass" class="py-20 border-t border-white/10 bg-gradient-to-b from-[#07090e] via-[#0a0e1a] to-[#07090e] relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            
+            <div class="max-w-3xl mb-12">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-mono mb-3">
+                    03 // Глубокое погружение в архитектуру сеток
+                </div>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+                    Компоновка <span class="font-mono text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-400">grid()</span> в CustomTkinter
+                </h2>
+                <p class="text-slate-400 mt-3 text-sm sm:text-base leading-relaxed">
+                    В CustomTkinter метод <code class="font-mono text-cyan-300">grid()</code> — основной инструмент построения адаптивных интерфейсов. 
+                    Главная ошибка новичков: разместить виджеты в сетке, но забыть настроить <code class="font-mono text-indigo-300">weight</code> у строк и столбцов родителя, из-за чего интерфейс не растягивается при изменении размера окна.
+                </p>
+            </div>
+
+            <!-- ИНТЕРАКТИВНАЯ ПЕСОЧНИЦА GRID() -->
+            <div class="glass-card rounded-3xl p-6 sm:p-8 border-indigo-500/30 mb-14">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 mb-6 border-b border-white/10">
+                    <div>
+                        <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-cyan-400"></span>
+                            Интерактивный симулятор сетки 3×3
+                        </h3>
+                        <p class="text-xs sm:text-sm text-slate-400 mt-1">Меняйте <code class="text-cyan-300">weight</code> колонок/строк, <code class="text-indigo-300">sticky</code>, <code class="text-purple-300">columnspan</code> и отступы — наблюдайте за поведением ячейки в реальном времени.</p>
+                    </div>
+                    <button onclick="resetGridSandbox()" class="self-start lg:self-auto px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-slate-300 transition-colors">
+                        Сбросить параметры
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                    
+                    <!-- Панель управления параметрами (Левая колонка) -->
+                    <div class="lg:col-span-5 space-y-5">
+                        
+                        <!-- 1. Веса колонок и строк (grid_columnconfigure / rowconfigure) -->
+                        <div class="p-4 rounded-2xl bg-[#07090e]/80 border border-white/10 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold uppercase tracking-wider text-indigo-300">1. Веса сетки (weight)</span>
+                                <span class="text-[11px] font-mono text-slate-400">Пропорции растяжения</span>
+                            </div>
+                            
+                            <div class="grid grid-cols-3 gap-2 text-xs">
+                                <div>
+                                    <label class="block font-mono text-[11px] text-slate-400 mb-1">Col 0 weight</label>
+                                    <select id="col0Weight" onchange="updateGridSandbox()" class="w-full bg-slate-900 border border-white/15 rounded-lg px-2 py-1.5 font-mono text-cyan-300">
+                                        <option value="0" selected>0 (фикс)</option>
+                                        <option value="1">1 (1x)</option>
+                                        <option value="2">2 (2x)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block font-mono text-[11px] text-slate-400 mb-1">Col 1 weight</label>
+                                    <select id="col1Weight" onchange="updateGridSandbox()" class="w-full bg-slate-900 border border-white/15 rounded-lg px-2 py-1.5 font-mono text-cyan-300">
+                                        <option value="0">0 (фикс)</option>
+                                        <option value="1" selected>1 (1x)</option>
+                                        <option value="2">2 (2x)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block font-mono text-[11px] text-slate-400 mb-1">Col 2 weight</label>
+                                    <select id="col2Weight" onchange="updateGridSandbox()" class="w-full bg-slate-900 border border-white/15 rounded-lg px-2 py-1.5 font-mono text-cyan-300">
+                                        <option value="0" selected>0 (фикс)</option>
+                                        <option value="1">1 (1x)</option>
+                                        <option value="2">2 (2x)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-2 text-xs pt-1">
+                                <div>
+                                    <label class="block font-mono text-[11px] text-slate-400 mb-1">Row 0 weight</label>
+                                    <select id="row0Weight" onchange="updateGridSandbox()" class="w-full bg-slate-900 border border-white/15 rounded-lg px-2 py-1.5 font-mono text-purple-300">
+                                        <option value="0" selected>0 (фикс)</option>
+                                        <option value="1">1 (1x)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block font-mono text-[11px] text-slate-400 mb-1">Row 1 weight</label>
+                                    <select id="row1Weight" onchange="updateGridSandbox()" class="w-full bg-slate-900 border border-white/15 rounded-lg px-2 py-1.5 font-mono text-purple-300">
+                                        <option value="0">0 (фикс)</option>
+                                        <option value="1" selected>1 (1x)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block font-mono text-[11px] text-slate-400 mb-1">Row 2 weight</label>
+                                    <select id="row2Weight" onchange="updateGridSandbox()" class="w-full bg-slate-900 border border-white/15 rounded-lg px-2 py-1.5 font-mono text-purple-300">
+                                        <option value="0" selected>0 (фикс)</option>
+                                        <option value="1">1 (1x)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Параметр sticky (Прилипание / Растяжение внутри ячейки) -->
+                        <div class="p-4 rounded-2xl bg-[#07090e]/80 border border-white/10 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold uppercase tracking-wider text-cyan-300">2. sticky (Позиция в ячейке)</span>
+                                <span id="stickyBadge" class="font-mono text-xs px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300">"nsew"</span>
+                            </div>
+
+                            <div class="grid grid-cols-4 gap-1.5 font-mono text-xs">
+                                <button type="button" onclick="setGridSticky('')" class="sticky-opt py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10">"" (центр)</button>
+                                <button type="button" onclick="setGridSticky('n')" class="sticky-opt py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10">"n" (верх)</button>
+                                <button type="button" onclick="setGridSticky('s')" class="sticky-opt py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10">"s" (низ)</button>
+                                <button type="button" onclick="setGridSticky('w')" class="sticky-opt py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10">"w" (лево)</button>
+                                <button type="button" onclick="setGridSticky('e')" class="sticky-opt py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10">"e" (право)</button>
+                                <button type="button" onclick="setGridSticky('ew')" class="sticky-opt py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10">"ew" (шир.)</button>
+                                <button type="button" onclick="setGridSticky('ns')" class="sticky-opt py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10">"ns" (выс.)</button>
+                                <button type="button" onclick="setGridSticky('nsew')" class="sticky-opt active py-1.5 rounded-lg bg-indigo-600 text-white border border-indigo-400">"nsew"</button>
+                            </div>
+                        </div>
+
+                        <!-- 3. Объединение ячеек и отступы -->
+                        <div class="p-4 rounded-2xl bg-[#07090e]/80 border border-white/10 space-y-3">
+                            <span class="text-xs font-bold uppercase tracking-wider text-purple-300 block">3. Объединение и отступы (padx / pady)</span>
+                            
+                            <div class="grid grid-cols-2 gap-3 text-xs">
+                                <div>
+                                    <label class="block font-mono text-slate-400 mb-1">columnspan: <span id="colspanVal" class="text-white">1</span></label>
+                                    <input type="range" id="gridColspan" min="1" max="2" value="1" oninput="updateGridSandbox()" class="w-full accent-indigo-500">
+                                </div>
+                                <div>
+                                    <label class="block font-mono text-slate-400 mb-1">rowspan: <span id="rowspanVal" class="text-white">1</span></label>
+                                    <input type="range" id="gridRowspan" min="1" max="2" value="1" oninput="updateGridSandbox()" class="w-full accent-indigo-500">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3 text-xs pt-1">
+                                <div>
+                                    <label class="block font-mono text-slate-400 mb-1">padx: <span id="padxVal" class="text-cyan-300">12</span> px</label>
+                                    <input type="range" id="gridPadx" min="0" max="28" value="12" oninput="updateGridSandbox()" class="w-full accent-cyan-500">
+                                </div>
+                                <div>
+                                    <label class="block font-mono text-slate-400 mb-1">pady: <span id="padyVal" class="text-cyan-300">12</span> px</label>
+                                    <input type="range" id="gridPady" min="0" max="28" value="12" oninput="updateGridSandbox()" class="w-full accent-cyan-500">
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Визуальный холст сетки и живой Python-код (Правая колонка) -->
+                    <div class="lg:col-span-7 flex flex-col gap-5">
+                        
+                        <!-- Визуальное окно с пунктирной сеткой -->
+                        <div class="ctk-stage" data-ctk-theme="dark">
+                            <div class="ctk-window rounded-2xl p-4 shadow-2xl">
+                                <div class="flex items-center justify-between text-[11px] font-mono opacity-75 mb-2.5 px-1">
+                                    <span>Окно приложения (пунктир = границы ячеек grid)</span>
+                                    <span class="text-cyan-400">Целевой виджет: row=1, col=1</span>
+                                </div>
+
+                                <!-- Сама сетка 3x3 -->
+                                <div id="sandboxGridCanvas" class="w-full h-72 rounded-xl border border-dashed border-slate-500/50 bg-black/20 p-1 transition-all" style="display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: auto 1fr auto;">
+                                    
+                                    <!-- Ячейка (0,0) -->
+                                    <div id="cell-0-0" class="border border-dashed border-slate-500/30 p-2 flex items-center justify-center text-[10px] font-mono opacity-60">
+                                        (0,0)
+                                    </div>
+                                    <!-- Ячейка (0,1) -->
+                                    <div id="cell-0-1" class="border border-dashed border-slate-500/30 p-2 flex items-center justify-center text-[10px] font-mono opacity-60">
+                                        (0,1) Header
+                                    </div>
+                                    <!-- Ячейка (0,2) -->
+                                    <div id="cell-0-2" class="border border-dashed border-slate-500/30 p-2 flex items-center justify-center text-[10px] font-mono opacity-60">
+                                        (0,2)
+                                    </div>
+
+                                    <!-- Ячейка (1,0) -->
+                                    <div id="cell-1-0" class="border border-dashed border-slate-500/30 p-2 flex items-center justify-center text-[10px] font-mono opacity-60">
+                                        (1,0) Nav
+                                    </div>
+
+                                    <!-- ЦЕЛЕВАЯ ОБЛАСТЬ ЯЧЕЙКИ (1,1) -->
+                                    <div id="targetCellWrapper" class="border-2 border-dashed border-cyan-400/60 bg-cyan-500/5 relative flex transition-all" style="grid-column: 2 / span 1; grid-row: 2 / span 1; padding: 12px; align-items: stretch; justify-content: stretch;">
+                                        <span class="absolute top-1 left-1.5 text-[9px] font-mono text-cyan-400/80 pointer-events-none">Ячейка (1,1)</span>
+                                        <!-- Целевой виджет CTkButton / CTkFrame -->
+                                        <div id="targetWidgetBox" class="ctk-btn rounded-lg px-4 py-2.5 shadow-lg flex flex-col items-center justify-center text-center transition-all">
+                                            <span class="text-xs font-bold">Целевой виджет</span>
+                                            <span id="widgetDimensionsBadge" class="text-[10px] font-mono opacity-85 mt-0.5">sticky="nsew"</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Ячейка (1,2) -->
+                                    <div id="cell-1-2" class="border border-dashed border-slate-500/30 p-2 flex items-center justify-center text-[10px] font-mono opacity-60">
+                                        (1,2)
+                                    </div>
+
+                                    <!-- Ячейка (2,0) -->
+                                    <div id="cell-2-0" class="border border-dashed border-slate-500/30 p-2 flex items-center justify-center text-[10px] font-mono opacity-60">
+                                        (2,0)
+                                    </div>
+                                    <!-- Ячейка (2,1) -->
+                                    <div id="cell-2-1" class="border border-dashed border-slate-500/30 p-2 flex items-center justify-center text-[10px] font-mono opacity-60">
+                                        (2,1) Footer
+                                    </div>
+                                    <!-- Ячейка (2,2) -->
+                                    <div id="cell-2-2" class="border border-dashed border-slate-500/30 p-2 flex items-center justify-center text-[10px] font-mono opacity-60">
+                                        (2,2)
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Автоматически генерируемый Python-код -->
+                        <div class="relative">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-mono text-slate-400">Сгенерированный код для вашего макета:</span>
+                                <button onclick="copyCodeBlock('sandboxGeneratedCode')" class="px-3 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 text-xs font-medium text-cyan-300 transition-colors">
+                                    Копировать код
+                                </button>
+                            </div>
+                            <pre id="sandboxGeneratedCode" class="font-mono text-xs leading-relaxed p-4 rounded-2xl bg-[#06080d] border border-white/10 overflow-x-auto text-slate-200"></pre>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- ШПАРГАЛКА ПО ВСЕМ ПАРАМЕТРАМ И МЕТОДАМ GRID() -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                <!-- Карточка 1: Компас sticky -->
+                <div class="glass-card rounded-2xl p-6">
+                    <h4 class="text-base font-bold text-white font-mono mb-2">sticky — Компас прилипания</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-4">
+                        По умолчанию виджет располагается строго по центру ячейки и сжимается под размер своего текста. <code class="text-cyan-300">sticky</code> приклеивает его к краям (сторонам света):
+                    </p>
+                    <!-- Визуальная роза ветров -->
+                    <div class="bg-[#06080d] rounded-xl p-4 border border-white/5 font-mono text-xs flex flex-col items-center gap-1.5 mb-3">
+                        <div class="px-2.5 py-1 rounded bg-indigo-500/20 text-indigo-300">"n" (North / Верх)</div>
+                        <div class="flex items-center gap-3 w-full justify-between">
+                            <span class="px-2 py-1 rounded bg-cyan-500/20 text-cyan-300">"w" (Лево)</span>
+                            <span class="px-2.5 py-1 rounded bg-purple-500/20 text-purple-300 font-bold">"nsew" (Вся ячейка)</span>
+                            <span class="px-2 py-1 rounded bg-cyan-500/20 text-cyan-300">"e" (Право)</span>
+                        </div>
+                        <div class="px-2.5 py-1 rounded bg-indigo-500/20 text-indigo-300">"s" (South / Низ)</div>
+                    </div>
+                    <ul class="text-xs text-slate-300 space-y-1 font-mono">
+                        <li>• <span class="text-cyan-300">"ew"</span> — растянуть по горизонтали (для Entry, Button)</li>
+                        <li>• <span class="text-cyan-300">"ns"</span> — растянуть по вертикали (для Sidebar)</li>
+                        <li>• <span class="text-cyan-300">"nsew"</span> — заполнить всю ячейку (для Frame, Textbox)</li>
+                    </ul>
+                </div>
+
+                <!-- Карточка 2: Отступы padx / pady -->
+                <div class="glass-card rounded-2xl p-6">
+                    <h4 class="text-base font-bold text-white font-mono mb-2">padx & pady — Внешние отступы</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-4">
+                        Задают свободное пространство в пикселях вокруг виджета внутри ячейки. Можно передавать одно число или кортеж из двух чисел для асимметричных отступов.
+                    </p>
+                    <pre class="font-mono text-xs p-3.5 rounded-xl bg-[#06080d] border border-white/5 text-slate-300 overflow-x-auto"><code><span class="py-com"># Одинаковый отступ со всех сторон:</span>
+w.grid(<span class="py-arg">row</span>=<span class="py-num">0</span>, <span class="py-arg">column</span>=<span class="py-num">0</span>, <span class="py-arg">padx</span>=<span class="py-num">20</span>, <span class="py-arg">pady</span>=<span class="py-num">10</span>)
+
+<span class="py-com"># Разные отступы: (слева, справа) и (сверху, снизу)</span>
+w.grid(
+    <span class="py-arg">row</span>=<span class="py-num">1</span>, <span class="py-arg">column</span>=<span class="py-num">0</span>,
+    <span class="py-arg">padx</span>=(<span class="py-num">20</span>, <span class="py-num">5</span>),
+    <span class="py-arg">pady</span>=(<span class="py-num">15</span>, <span class="py-num">0</span>)
+)</code></pre>
+                </div>
+
+                <!-- Карточка 3: grid_columnconfigure / rowconfigure -->
+                <div class="glass-card rounded-2xl p-6">
+                    <h4 class="text-base font-bold text-white font-mono mb-2">columnconfigure / rowconfigure</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-4">
+                        Вызываются у <strong>родительского контейнера</strong> (<code class="text-indigo-300">self</code> или <code class="text-indigo-300">frame</code>), чтобы указать, какие столбцы и строки должны забирать свободное место при растяжении окна.
+                    </p>
+                    <pre class="font-mono text-xs p-3.5 rounded-xl bg-[#06080d] border border-white/5 text-slate-300 overflow-x-auto"><code><span class="py-com"># Колонка 1 заберет всё свободное место:</span>
+self.grid_columnconfigure(<span class="py-num">1</span>, <span class="py-arg">weight</span>=<span class="py-num">1</span>)
+
+<span class="py-com"># Настроить сразу несколько колонок:</span>
+self.grid_columnconfigure((<span class="py-num">0</span>, <span class="py-num">1</span>), <span class="py-arg">weight</span>=<span class="py-num">1</span>, <span class="py-arg">uniform</span>=<span class="py-str">"col"</span>)
+
+<span class="py-com"># Минимальная ширина колонки (px):</span>
+self.grid_columnconfigure(<span class="py-num">0</span>, <span class="py-arg">minsize</span>=<span class="py-num">180</span>)</code></pre>
+                </div>
+
+                <!-- Карточка 4: columnspan и rowspan -->
+                <div class="glass-card rounded-2xl p-6">
+                    <h4 class="text-base font-bold text-white font-mono mb-2">columnspan & rowspan</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-4">
+                        Позволяют одному виджету занять сразу несколько соседних столбцов или строк (как объединение ячеек в Excel).
+                    </p>
+                    <pre class="font-mono text-xs p-3.5 rounded-xl bg-[#06080d] border border-white/5 text-slate-300 overflow-x-auto"><code><span class="py-com"># Кнопка на всю ширину 2-х колонок:</span>
+submit_btn.grid(
+    <span class="py-arg">row</span>=<span class="py-num">2</span>, <span class="py-arg">column</span>=<span class="py-num">0</span>,
+    <span class="py-arg">columnspan</span>=<span class="py-num">2</span>,
+    <span class="py-arg">sticky</span>=<span class="py-str">"ew"</span>
+)</code></pre>
+                </div>
+
+                <!-- Карточка 5: Скрытие виджетов grid_remove vs grid_forget -->
+                <div class="glass-card rounded-2xl p-6">
+                    <h4 class="text-base font-bold text-white font-mono mb-2">grid_remove() vs grid_forget()</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-4">
+                        Как временно спрятать элемент интерфейса и вернуть его обратно на прежнее место:
+                    </p>
+                    <pre class="font-mono text-xs p-3.5 rounded-xl bg-[#06080d] border border-white/5 text-slate-300 overflow-x-auto"><code><span class="py-com"># ЛУЧШИЙ СПОСОБ: прячет, но ПОМНИТ row/col/padx</span>
+widget.grid_remove()
+widget.grid()  <span class="py-com"># Вернёт точно туда же!</span>
+
+<span class="py-com"># Стирает все настройки сетки:</span>
+widget.grid_forget()</code></pre>
+                </div>
+
+                <!-- Карточка 6: Типичный паттерн Sidebar + Main -->
+                <div class="glass-card rounded-2xl p-6">
+                    <h4 class="text-base font-bold text-white font-mono mb-2">Паттерн: Сайдбар + Рабочая зона</h4>
+                    <p class="text-xs text-slate-400 leading-relaxed mb-4">
+                        Классическая схема десктопного приложения: слева фиксированное меню (<code class="text-indigo-300">weight=0</code>), справа растягиваемый контент (<code class="text-cyan-300">weight=1</code>).
+                    </p>
+                    <pre class="font-mono text-xs p-3.5 rounded-xl bg-[#06080d] border border-white/5 text-slate-300 overflow-x-auto"><code>self.grid_columnconfigure(<span class="py-num">1</span>, <span class="py-arg">weight</span>=<span class="py-num">1</span>)
+self.grid_rowconfigure(<span class="py-num">0</span>, <span class="py-arg">weight</span>=<span class="py-num">1</span>)
+
+sidebar.grid(<span class="py-arg">row</span>=<span class="py-num">0</span>, <span class="py-arg">column</span>=<span class="py-num">0</span>, <span class="py-arg">sticky</span>=<span class="py-str">"ns"</span>)
+content.grid(<span class="py-arg">row</span>=<span class="py-num">0</span>, <span class="py-arg">column</span>=<span class="py-num">1</span>, <span class="py-arg">sticky</span>=<span class="py-str">"nsew"</span>)</code></pre>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- БЛОК 4: ТЕМЫ, АДАПТИВНЫЕ ЦВЕТА И CTKIMAGE -->
+    <section id="themes-images" class="py-16 border-t border-white/5">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="mb-10">
+                <span class="text-xs font-mono uppercase tracking-wider text-purple-400">04 // Стилизация и графика</span>
+                <h2 class="text-2xl sm:text-3xl font-bold text-white mt-1">Адаптивные цвета и работа с картинками (CTkImage)</h2>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Карточка: Кортежи цветов Light/Dark -->
+                <div class="glass-card rounded-2xl p-6 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold text-white mb-2">Адаптивные цвета <code class="font-mono text-cyan-300">(light_color, dark_color)</code></h3>
+                        <p class="text-xs sm:text-sm text-slate-400 leading-relaxed mb-4">
+                            Почти любой цветовой параметр в CustomTkinter принимает кортеж из двух HEX-цветов. Библиотека автоматически переключает их при смене системной или пользовательской темы.
+                        </p>
+                    </div>
+
+                    <div class="relative">
+                        <button onclick="copyCodeBlock('code-colors')" class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-md bg-white/10 hover:bg-indigo-500/30 text-[11px] text-slate-200 transition-colors">Копировать</button>
+                        <pre id="code-colors" class="font-mono text-xs leading-relaxed p-4 rounded-xl bg-[#06080d] border border-white/5 overflow-x-auto text-slate-300"><code>card = ctk.CTkFrame(
+    master,
+    <span class="py-com"># (Цвет в светлой теме, Цвет в тёмной теме)</span>
+    <span class="py-arg">fg_color</span>=(<span class="py-str">"#f1f5f9"</span>, <span class="py-str">"#1e293b"</span>),
+    <span class="py-arg">border_color</span>=(<span class="py-str">"#cbd5e1"</span>, <span class="py-str">"#334155"</span>),
+    <span class="py-arg">border_width</span>=<span class="py-num">1</span>,
+    <span class="py-arg">corner_radius</span>=<span class="py-num">14</span>
+)
+
+<span class="py-com"># Динамическое переключение темы по кнопке:</span>
+ctk.set_appearance_mode(<span class="py-str">"light"</span>) <span class="py-com"># или "dark"</span></code></pre>
+                    </div>
+                </div>
+
+                <!-- Карточка: CTkImage для HighDPI экранов -->
+                <div class="glass-card rounded-2xl p-6 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold text-white mb-2">Чёткие иконки через <code class="font-mono text-cyan-300">ctk.CTkImage</code></h3>
+                        <p class="text-xs sm:text-sm text-slate-400 leading-relaxed mb-4">
+                            Обычный <code class="font-mono text-slate-300">PhotoImage</code> мылит картинки на Retina/4K экранах. Используйте <code class="font-mono text-indigo-300">CTkImage</code> с библиотекой <code class="font-mono text-slate-300">Pillow (PIL)</code> — она поддерживает масштабирование и разные иконки для светлой и тёмной темы.
+                        </p>
+                    </div>
+
+                    <div class="relative">
+                        <button onclick="copyCodeBlock('code-image')" class="absolute top-2.5 right-2.5 px-2.5 py-1 rounded-md bg-white/10 hover:bg-indigo-500/30 text-[11px] text-slate-200 transition-colors">Копировать</button>
+                        <pre id="code-image" class="font-mono text-xs leading-relaxed p-4 rounded-xl bg-[#06080d] border border-white/5 overflow-x-auto text-slate-300"><code><span class="py-kw">from</span> PIL <span class="py-kw">import</span> Image
+
+icon = ctk.CTkImage(
+    <span class="py-arg">light_image</span>=Image.open(<span class="py-str">"icon_dark.png"</span>),
+    <span class="py-arg">dark_image</span>=Image.open(<span class="py-str">"icon_light.png"</span>),
+    <span class="py-arg">size</span>=(<span class="py-num">20</span>, <span class="py-num">20</span>)
+)
+
+btn = ctk.CTkButton(master, <span class="py-arg">text</span>=<span class="py-str">"Настройки"</span>, <span class="py-arg">image</span>=icon, <span class="py-arg">compound</span>=<span class="py-str">"left"</span>)</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER С ПОДСКАЗКОЙ ДЛЯ GITHUB PAGES -->
+    <footer class="border-t border-white/10 py-10 bg-[#05070c]">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+            <div class="flex items-center gap-2.5">
+                <span class="font-mono font-bold text-indigo-400">CTk // Cheatsheet</span>
+                <span>•</span>
+                <span>Сверстано в стиле Antigravity UI</span>
+            </div>
+            <div class="text-center sm:text-right">
+                <span class="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-slate-300 font-mono">
+                    GitHub Pages Ready: сохраните как index.html и включите Pages в Settings
+                </span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT ЛОГИКА ИНТЕРАКТИВНОСТИ -->
+    <script>
+        // 1. Глобальное переключение темы предпросмотра виджетов (Dark / Light)
+        let currentCtkTheme = 'dark';
+        function togglePreviewTheme() {
+            currentCtkTheme = currentCtkTheme === 'dark' ? 'light' : 'dark';
+            const stages = document.querySelectorAll('.ctk-stage');
+            stages.forEach(stage => stage.setAttribute('data-ctk-theme', currentCtkTheme));
+
+            const label = document.getElementById('themeToggleLabel');
+            const dot = document.getElementById('themeIndicatorDot');
+            if (currentCtkTheme === 'dark') {
+                label.textContent = 'Dark';
+                dot.className = 'w-2.5 h-2.5 rounded-full bg-indigo-400 shadow-[0_0_8px_#6366f1]';
+            } else {
+                label.textContent = 'Light';
+                dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_8px_#fbbf24]';
+            }
+        }
+
+        // 2. Копирование текста и блоков кода с Toast-уведомлением
+        function showToast(msg = 'Код скопирован в буфер обмена!') {
+            const toast = document.getElementById('copyToast');
+            toast.querySelector('span').textContent = msg;
+            toast.classList.remove('translate-y-24', 'opacity-0');
+            clearTimeout(window._toastTimer);
+            window._toastTimer = setTimeout(() => {
+                toast.classList.add('translate-y-24', 'opacity-0');
+            }, 2200);
+        }
+
+        function copyText(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast('Команда скопирована!');
+            } catch (err) {
+                console.error('Ошибка копирования:', err);
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function copyCodeBlock(elementId) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            const text = el.innerText;
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast('Код скопирован в буфер обмена!');
+            } catch (err) {
+                console.error('Ошибка копирования:', err);
+            }
+            document.body.removeChild(textarea);
+        }
+
+        // 3. Поиск и фильтрация виджетов
+        let activeCategory = 'all';
+
+        function filterCategory(category, btnEl) {
+            activeCategory = category;
+            document.querySelectorAll('.cat-btn').forEach(b => {
+                b.classList.remove('bg-indigo-600', 'text-white');
+                b.classList.add('bg-white/5', 'text-slate-300');
+            });
+            btnEl.classList.remove('bg-white/5', 'text-slate-300');
+            btnEl.classList.add('bg-indigo-600', 'text-white');
+            applyWidgetFilters();
+        }
+
+        document.getElementById('widgetSearch').addEventListener('input', applyWidgetFilters);
+
+        function applyWidgetFilters() {
+            const query = document.getElementById('widgetSearch').value.toLowerCase().trim();
+            const cards = document.querySelectorAll('.widget-card');
+            cards.forEach(card => {
+                const cat = card.getAttribute('data-category');
+                const keywords = card.getAttribute('data-keywords').toLowerCase();
+                const textContent = card.innerText.toLowerCase();
+
+                const matchesCat = activeCategory === 'all' || cat === activeCategory;
+                const matchesQuery = !query || keywords.includes(query) || textContent.includes(query);
+
+                card.style.display = (matchesCat && matchesQuery) ? 'flex' : 'none';
+            });
+        }
+
+        // 4. Интерактивные демо внутри карточек виджетов
+        function toggleDemoSwitch(btn) {
+            const isChecked = btn.getAttribute('data-checked') === 'true';
+            const nextState = !isChecked;
+            btn.setAttribute('data-checked', String(nextState));
+
+            const track = btn.querySelector('.switch-track');
+            const thumb = btn.querySelector('.switch-thumb');
+            const label = btn.querySelector('.switch-label');
+
+            if (nextState) {
+                track.classList.remove('bg-slate-600');
+                track.classList.add('bg-[#1f6aa5]');
+                thumb.classList.add('translate-x-5');
+                label.textContent = 'Уведомления: ВКЛ';
+            } else {
+                track.classList.remove('bg-[#1f6aa5]');
+                track.classList.add('bg-slate-600');
+                thumb.classList.remove('translate-x-5');
+                label.textContent = 'Уведомления: ВЫКЛ';
+            }
+        }
+
+        function updateSliderDemo(val) {
+            document.getElementById('sliderDemoVal').textContent = val + '%';
+            document.getElementById('progressDemoFill').style.width = val + '%';
+        }
+
+        function selectSegBtn(btn, label) {
+            document.querySelectorAll('#segDemoGroup .seg-item').forEach(el => {
+                el.classList.remove('bg-[#1f6aa5]', 'text-white');
+                el.classList.add('opacity-75');
+            });
+            btn.classList.add('bg-[#1f6aa5]', 'text-white');
+            btn.classList.remove('opacity-75');
+            document.getElementById('segDemoOutput').textContent = 'Выбрано: ' + label;
+        }
+
+        function switchDemoTab(index, btn) {
+            document.querySelectorAll('.tab-demo-btn').forEach(el => {
+                el.classList.remove('bg-[#1f6aa5]', 'text-white');
+                el.classList.add('opacity-75');
+            });
+            btn.classList.add('bg-[#1f6aa5]', 'text-white');
+            btn.classList.remove('opacity-75');
+
+            document.getElementById('tabDemoContent0').classList.toggle('hidden', index !== 0);
+            document.getElementById('tabDemoContent1').classList.toggle('hidden', index !== 1);
+        }
+
+        // 5. ИНТЕРАКТИВНЫЙ СИМУЛЯТОР GRID()
+        let currentGridSticky = 'nsew';
+
+        function setGridSticky(val) {
+            currentGridSticky = val;
+            document.getElementById('stickyBadge').textContent = `"${val}"`;
+            document.querySelectorAll('.sticky-opt').forEach(btn => {
+                btn.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-400');
+                btn.classList.add('bg-white/5', 'text-slate-300', 'border-white/10');
+                if (btn.textContent.startsWith(`"${val}"`)) {
+                    btn.classList.remove('bg-white/5', 'text-slate-300', 'border-white/10');
+                    btn.classList.add('bg-indigo-600', 'text-white', 'border-indigo-400');
+                }
+            });
+            updateGridSandbox();
+        }
+
+        function resetGridSandbox() {
+            document.getElementById('col0Weight').value = '0';
+            document.getElementById('col1Weight').value = '1';
+            document.getElementById('col2Weight').value = '0';
+            document.getElementById('row0Weight').value = '0';
+            document.getElementById('row1Weight').value = '1';
+            document.getElementById('row2Weight').value = '0';
+            document.getElementById('gridColspan').value = '1';
+            document.getElementById('gridRowspan').value = '1';
+            document.getElementById('gridPadx').value = '12';
+            document.getElementById('gridPady').value = '12';
+            setGridSticky('nsew');
+        }
+
+        function updateGridSandbox() {
+            const c0 = parseInt(document.getElementById('col0Weight').value);
+            const c1 = parseInt(document.getElementById('col1Weight').value);
+            const c2 = parseInt(document.getElementById('col2Weight').value);
+
+            const r0 = parseInt(document.getElementById('row0Weight').value);
+            const r1 = parseInt(document.getElementById('row1Weight').value);
+            const r2 = parseInt(document.getElementById('row2Weight').value);
+
+            const colspan = parseInt(document.getElementById('gridColspan').value);
+            const rowspan = parseInt(document.getElementById('gridRowspan').value);
+            const padx = parseInt(document.getElementById('gridPadx').value);
+            const pady = parseInt(document.getElementById('gridPady').value);
+
+            document.getElementById('colspanVal').textContent = colspan;
+            document.getElementById('rowspanVal').textContent = rowspan;
+            document.getElementById('padxVal').textContent = padx;
+            document.getElementById('padyVal').textContent = pady;
+
+            // Формируем CSS grid-template-columns и rows согласно весам Tkinter
+            const colTrack = [c0, c1, c2].map(w => w === 0 ? 'auto' : `${w}fr`).join(' ');
+            const rowTrack = [r0, r1, r2].map(w => w === 0 ? 'auto' : `${w}fr`).join(' ');
+
+            const canvas = document.getElementById('sandboxGridCanvas');
+            canvas.style.gridTemplateColumns = colTrack;
+            canvas.style.gridTemplateRows = rowTrack;
+
+            // Скрываем перекрытые ячейки при colspan > 1 или rowspan > 1
+            document.getElementById('cell-1-2').style.display = colspan > 1 ? 'none' : 'flex';
+            document.getElementById('cell-2-1').style.display = rowspan > 1 ? 'none' : 'flex';
+            document.getElementById('cell-2-2').style.display = (colspan > 1 && rowspan > 1) ? 'none' : 'flex';
+
+            const wrapper = document.getElementById('targetCellWrapper');
+            wrapper.style.gridColumn = `2 / span ${colspan}`;
+            wrapper.style.gridRow = `2 / span ${rowspan}`;
+            wrapper.style.padding = `${pady}px ${padx}px`;
+
+            // Выравнивание и растяжение виджета внутри ячейки по правилам sticky
+            const hasN = currentGridSticky.includes('n');
+            const hasS = currentGridSticky.includes('s');
+            const hasW = currentGridSticky.includes('w');
+            const hasE = currentGridSticky.includes('e');
+
+            if (hasN && hasS) wrapper.style.alignItems = 'stretch';
+            else if (hasN) wrapper.style.alignItems = 'flex-start';
+            else if (hasS) wrapper.style.alignItems = 'flex-end';
+            else wrapper.style.alignItems = 'center';
+
+            if (hasW && hasE) wrapper.style.justifyContent = 'stretch';
+            else if (hasW) wrapper.style.justifyContent = 'flex-start';
+            else if (hasE) wrapper.style.justifyContent = 'flex-end';
+            else wrapper.style.justifyContent = 'center';
+
+            document.getElementById('widgetDimensionsBadge').textContent = `sticky="${currentGridSticky}"`;
+
+            // Генерируем чистый Python-код
+            let configLines = [];
+            [c0, c1, c2].forEach((w, idx) => {
+                if (w > 0) configLines.push(`app.grid_columnconfigure(<span class="py-num">${idx}</span>, <span class="py-arg">weight</span>=<span class="py-num">${w}</span>)`);
+            });
+            [r0, r1, r2].forEach((w, idx) => {
+                if (w > 0) configLines.push(`app.grid_rowconfigure(<span class="py-num">${idx}</span>, <span class="py-arg">weight</span>=<span class="py-num">${w}</span>)`);
+            });
+
+            let gridArgs = [
+                `<span class="py-arg">row</span>=<span class="py-num">1</span>`,
+                `<span class="py-arg">column</span>=<span class="py-num">1</span>`
+            ];
+            if (colspan > 1) gridArgs.push(`<span class="py-arg">columnspan</span>=<span class="py-num">${colspan}</span>`);
+            if (rowspan > 1) gridArgs.push(`<span class="py-arg">rowspan</span>=<span class="py-num">${rowspan}</span>`);
+            gridArgs.push(`<span class="py-arg">padx</span>=<span class="py-num">${padx}</span>`);
+            gridArgs.push(`<span class="py-arg">pady</span>=<span class="py-num">${pady}</span>`);
+            if (currentGridSticky !== '') gridArgs.push(`<span class="py-arg">sticky</span>=<span class="py-str">"${currentGridSticky}"</span>`);
+
+            const codeHTML = `<code><span class="py-com"># 1. Настройка растяжения колонок и строк у родителя:</span>\n${configLines.length ? configLines.join('\n') : '<span class="py-com"># Все веса равны 0 — ячейки не растягиваются</span>'}\n\n<span class="py-com"># 2. Размещение целевого виджета в сетке:</span>\nwidget.grid(${gridArgs.join(', ')})</code>`;
+
+            document.getElementById('sandboxGeneratedCode').innerHTML = codeHTML;
+        }
+
+        // Инициализация симулятора при загрузке страницы
+        window.addEventListener('DOMContentLoaded', () => {
+            updateGridSandbox();
+        });
+    </script>
+</body>
+</html>
